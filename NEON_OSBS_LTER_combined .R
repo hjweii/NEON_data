@@ -298,17 +298,33 @@ head(area_add4)
 final3<-merge(final2, area_add4, by=0, all=T)
 names(final3)
 
-write.csv(final3,file="~/Documents/NEON_LTER_2018/final_plot_level.csv", row.names=FALSE)
+# neonbird Source Area Calculation
+neonbird_area<-gArea(neonbird)
+neonbird_area
+neonbird_area<- data.frame(neonbird_area)
+neonbird_area
+#Rename column
+names(neonbird_area)[names(neonbird_area)=="neonbird_area"] <- "neonbird_area"
+head(neonbird_area)
+#Merge data 
+area_add5<- merge(combined.distances, neonbird_area, by=0, all=TRUE)
+head(neonbird_area)
+head(area_add5)
+#Merge data frames
+final4<-merge(final3, area_add5, by=0, all=T)
+names(final4)
+
+write.csv(final4,file="~/Documents/NEON_LTER_2018/final_plot_level.csv", row.names=FALSE)
 ##################################################################################################################################################################
 #Now we need to clean up the data frame and select only the columns we need.
 #Select important columns
 keep=c("plotID", "siteID", "siteNam", "burn_dist",	"boun_dist",	"neonbird_dist",	"FNAI_dist", "neon_dist" ,
-       "neon_area", "FNAI_area", "osmu_area", "burn_area" )
+       "neon_area", "FNAI_area", "osmu_area", "burn_area","neonbird_area" )
 
 # Check that all names in keep are in combined.dist3. You want this result to be zero. If it is anything other than zero, you need to figure out what the appropriate column names are.
 keep[!keep %in% names(final3)]
 
-plot_level_dataframe <- final3
+plot_level_dataframe <- final4
 plot_level_dataframe@data <- plot_level_dataframe@data[,keep] 
 write.csv(plot_level_dataframe, file="~/Documents/NEON_LTER_2018/final_plot_level.csv", row.names=F)
 
