@@ -7,8 +7,7 @@
 library("googledrive")
 
 # Start with a clear workspace and set working directory to google drive -> NEON_LTER_2018 folder -> data -> raw_data
-rm(list=ls())
-# setwd('/Users/hjwei/Google Drive/NEON_LTER_2018/data/raw_data')
+# rm(list=ls())
 setwd("~/Documents/NEON_LTER_2018")
 
 #install these packages and load the libraries
@@ -230,4 +229,107 @@ combined.distances$dist_type[combined.distances$dist_type=="neon_dist"]<-"neon"
 sort(unique(combined.distances$dist_type))
 
 write.csv(combined.distances,file="~/Documents/NEON_LTER_2018/combined_distance_data.csv", row.names=FALSE)
+
+#To save the workspace with all of our data and final products, use the following code:
+save.image("NEON_OSBS_LTER_combined.RData")
+###################################################################################################################################################################Title: Calculating the surface area of a shapefile 
+
+load("NEON_OSBS_LTER_combined.RData")
+
+#osbs Burn Area Calculation
+osbs_area<-gArea(osbs_boun)
+osbs_area
+osbs_area<- data.frame(osbs_area)
+osbs_area
+#Rename column
+names(osbs_area)[names(osbs_area)=="osbs_area"] <- "burn_area"
+head(osbs_area)
+#Merge data 
+area_add<- merge(combined.distances, osbs_area, by=0, all=TRUE)
+head(osbs_area)
+head(area_add)
+
+#osmu Area Calculation
+osmu_area<-gArea(osmu)
+osmu_area
+osmu_area<- data.frame(osmu_area)
+osmu_area
+#Rename column
+names(osmu_area)[names(osmu_area)=="osmu_area"] <- "osmu_area"
+head(osmu_area)
+#Merge data 
+area_add1<- merge(combined.distances, osmu_area, by=0, all=TRUE)
+head(osmu_area)
+head(area_add1)
+
+#Merge data frames
+final<-merge(area_add1, area_add, by=0, all=T)
+summary(final)
+
+#FNAI Area Calculation
+FNAI_area<-gArea(FNAI)
+FNAI_area
+FNAI_area<- data.frame(FNAI_area)
+FNAI_area
+#Rename column
+names(FNAI_area)[names(FNAI_area)=="FNAI_area"] <- "FNAI_area"
+head(FNAI_area)
+#Merge data 
+area_add3<- merge(combined.distances, FNAI_area, by=0, all=TRUE)
+head(FNAI_area)
+head(area_add3)
+#Merge data frames
+final2<-merge(final, area_add3, by=0, all=T)
+names(final2)
+
+# neon Source Area Calculation
+neon_area<-gArea(neon)
+neon_area
+neon_area<- data.frame(neon_area)
+neon_area
+#Rename column
+names(neon_area)[names(neon_area)=="neon_area"] <- "neon_area"
+head(neon_area)
+#Merge data 
+area_add4<- merge(combined.distances, neon_area, by=0, all=TRUE)
+head(neon_area)
+head(area_add4)
+#Merge data frames
+final3<-merge(final2, area_add4, by=0, all=T)
+names(final3)
+
+write.csv(final3,file="~/Documents/NEON_LTER_2018/final_plot_level.csv", row.names=FALSE)
+##################################################################################################################################################################
+#Now we need to clean up the data frame and select only the columns we need.
+#Select important columns
+keep=c("plotID", "siteID", "siteNam", "burn_dist",	"boun_dist",	"neonbird_dist",	"FNAI_dist", "neon_dist" ,
+       "neon_area", "FNAI_area", "osmu_area", "burn_area" )
+
+# Check that all names in keep are in combined.dist3. You want this result to be zero. If it is anything other than zero, you need to figure out what the appropriate column names are.
+keep[!keep %in% names(final3)]
+
+plot_level_dataframe <- final3
+plot_level_dataframe@data <- plot_level_dataframe@data[,keep] 
+write.csv(plot_level_dataframe, file="~/Documents/NEON_LTER_2018/final_plot_level.csv", row.names=F)
+
+#Make these data a data frame.
+plot_level_dataframe<-data.frame(plot_level_dataframe@data)
+class(plot_level_dataframe)
+head(plot_level_dataframe)
+
+##################################################################################################################################################################
+#Now we need to put our distance data into long format.
+#Long Format of combined.distances to characterize dist_type
+library(dplyr)
+library(reshape2)
+plot_level_dataframe<-read.csv("~/Documents/NEON_LTER_2018/final_plot_level.csv")
+head(plot_level_dataframe)
+
+#We have some unneccessary columns that came with the spatial point data frame. So, we will exclude those to further clean up our data frame.
+plot_level_dataframe$coords.x1<-NULL
+plot_level_dataframe$coords.x2<-NULL
+plot_level_dataframe$optional<-NULL
+head(plot_level_dataframe)
+
+#Create the long format
 
