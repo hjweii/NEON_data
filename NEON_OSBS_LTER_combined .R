@@ -1,7 +1,7 @@
 ## Title: Calculating the distances between disturbances and NEON sites
-## Date: 
-## Author: Cameo Chilcutt
-## Sources:  osbs-whj
+## Date: 14 Augest 2018
+## Author: Huijie Wei
+## Sources:  Cameo Arnold 
 
 # devtools::install_github("tidyverse/googledrive")
 library("googledrive")
@@ -51,7 +51,7 @@ osbs_boun<-spTransform(osbs_boun,CRS("+proj=utm +zone=17 ellps=WGS84"))
 summary(osbs_boun)
 
 #import os_mu shapefiles--region data
-osmu <- readOGR("./os_mu", "os_mu")
+osmu <- readOGR("./OSBS_os_mu", "os_mu")
 plot(osmu, col=rainbow(10),
      alpha=1, 
      legend=F, main="os_mu")
@@ -60,14 +60,14 @@ osmu<-spTransform(osmu,CRS("+proj=utm +zone=17 ellps=WGS84"))
 summary(osmu)
 
 #import NEON bird plot data
-neonbird<- readOGR("./NEON_bird_plots", "NEON_bird_plots")
+neonbird<- readOGR("./OSBS_NEON_bird_plots", "NEON_bird_plots")
 plot(neonbird, col=grey(1:100/100), legend=FALSE, main="NEON Bird plots")
 summary(neonbird)
 neonbird<-spTransform(neonbird,CRS("+proj=utm +zone=17 ellps=WGS84"))
 summary(neonbird)
 
 #import neon
-neon<- readOGR("./NEON", "Export_Output")
+neon<- readOGR("./OSBS_NEON", "Export_Output")
 plot(neon, col=rainbow(16),
      alpha=1,
      legend=F, main="NEON")
@@ -76,115 +76,86 @@ neon<-spTransform(neon,CRS("+proj=utm +zone=17 ellps=WGS84"))
 summary(neon)
 
 #import fnai
-FNAI<- readOGR("./FNAI", "FNAI")
+FNAI<- readOGR("./OSBS_FNAI", "FNAI")
 plot(FNAI, col=cm.colors(10), alpha=1, legend=F, main="FNAI")
 summary(FNAI)
 FNAI<-spTransform(FNAI,CRS("+proj=utm +zone=17 ellps=WGS84"))
 summary(FNAI)
 
 # osmu burn frequncy  #import frequency
-osmu_burn<- readOGR("./osmu_burn", "osmu_burn")
+osmu_burn<- readOGR("./OSBS_osmu_burn", "osmu_burn")
 plot(osmu_burn, col=cm.colors(10), alpha=1, legend=F, main="fire frequency")
 summary(osmu_burn)
 osmu_burn<-spTransform(osmu_burn,CRS("+proj=utm +zone=17 ellps=WGS84"))
 summary(osmu_burn)
 
+#import building
+building<-readOGR("./OSBS_buildings","buildings_facilities_selection")
+plot(building,col=rainbow(10),alpha=1,legend=F,main="Building")
+summary(building)
+building<-spTransform(building,CRS("+proj=utm +zone=17 ellps=WGS84"))
+summary(building)
+
+#import roads
+roads<-readOGR("./OSBS_roads","roads")
+plot(roads,legend=F, main="Roads")
+summary(roads)
+roads<-spTransform(roads,CRS("+proj=utm +zone=17 ellps=WGS84"))
+summary(roads)
 
 #################################################################################
-#Now we are going to measure distance between NEON data collection points and the Anaktuvuk fire.
 
-osbs_burn_dist<- apply(gDistance(osbs_UTM, osmu,byid=TRUE),2,min)
-osbs_burn_dist<- data.frame(osbs_burn_dist)
-head(osbs_burn_dist)
+#subset osbs data
+names(osbs_UTM)
+osbs_variables <- c("elevatn", "siteID", "plotID", "nlcdCls", "slpGrdn", "slpAspc")
+osbs_UTM <- osbs_UTM[osbs_variables]
+head(osbs_UTM)
+str(osbs_UTM)
 
-#Right now the column name is the same as the name of the data frame.
-# This can be confusing for R when we want to merge these data with the arc_UTM data.
-# So, we need to rename it using the code below.
-names(osbs_burn_dist)[names(osbs_burn_dist)=="osbs_burn_dist"] <- "burn_dist"
-head(osbs_burn_dist)
-
-#Now we are going to merge the data frames to make one complete dataset
-osbs1<- merge(osbs_UTM, osbs_burn_dist, by=0, all=TRUE)
-
-#Always check both data sets to make sure the distance measurements are the same as the original distance calculation file.
-head(osbs_burn_dist)
-head(osbs1)
+#Now we are going to measure distance between NEON data collection points and the fire.
+##### not works for osbs for it has too much fire in each site
 
 #Now let's calculate the distance for all of the disturbances in relation to the NEON collection sites.
 
-# boundary
-osbs_boun_dist<- apply(gDistance(osbs_UTM, osbs_boun,byid=TRUE),2,min)
-osbs_boun_dist<- data.frame(osbs_boun_dist)
-head(osbs_boun_dist)
-#Rename column
-names(osbs_boun_dist)[names(osbs_boun_dist)=="osbs_boun_dist"] <- "boun_dist"
-head(osbs_boun_dist)
-#Merge data frames
-osbs2<- merge(osbs_UTM, osbs_boun_dist, by=0, all=TRUE)
-#Check
-head(osbs_boun_dist)
-head(osbs2)
-#Merge both arc1 and arc2 dataframes to include all of the data for both burn_dist and boun_dist.
-combined.dist<-merge(osbs1, osbs2, by="plotID", all=T)
-write.csv(combined.dist,file="combined_distance_data.csv", row.names=FALSE)
-
-# neon bird
-osbs_neonbird_dist<- apply(gDistance(osbs_UTM, neonbird,byid=TRUE),2,min)
-osbs_neonbird_dist<- data.frame(osbs_neonbird_dist)
-head(osbs_neonbird_dist)
-#Rename column
-names(osbs_neonbird_dist)[names(osbs_neonbird_dist)=="osbs_neonbird_dist"] <- "neonbird_dist"
-head(osbs_neonbird_dist)
-#Merge data 
-osbs3<- merge(osbs_UTM, osbs_neonbird_dist, by=0, all=TRUE)
-head(osbs_neonbird_dist)
-head(osbs3)
-#Merge all data frames together
-combined.dist1<-merge(combined.dist, osbs3, by="plotID", all=T)
-write.csv(combined.dist1,file="combined_distance_data.csv", row.names=FALSE)
-
-# fnai
-osbs_FNAI_dist<- apply(gDistance(osbs_UTM, FNAI,byid=TRUE),2,min)
-osbs_FNAI_dist<- data.frame(osbs_FNAI_dist)
-#Rename column
-names(osbs_FNAI_dist)[names(osbs_FNAI_dist)=="osbs_FNAI_dist"] <- "FNAI_dist"
-head(osbs_FNAI_dist)
-#Merge data 
-osbs4<- merge(osbs_UTM, osbs_FNAI_dist, by=0, all=TRUE)
-#Check
-head(osbs_FNAI_dist)
-head(osbs4)
-#Merge all data frames together for a complete data set
-combined.dist2<-merge(combined.dist1, osbs4, by="plotID", all=T)
-write.csv(combined.dist2,file="combined_distance_data.csv", row.names=FALSE)
-
-# neon
-osbs_neon_dist<- apply(gDistance(osbs_UTM, neon,byid=TRUE),2,min)
-osbs_neon_dist<- data.frame(osbs_neon_dist)
-#Rename column
-names(osbs_neon_dist)[names(osbs_neon_dist)=="osbs_neon_dist"] <- "neon_dist"
-head(osbs_neon_dist)
+#building
+building_dist<-apply(gDistance(osbs_UTM,building,byid = TRUE),2,min)
+building_dist<-data.frame(building_dist)
+#rename column
+names(building_dist)[names(building_dist)=="building_dist"]<-"building_dist"
+head(building_dist)
 #Merge data frames to make one complete dataset
-osbs5<- merge(osbs_UTM, osbs_neon_dist, by=0, all=TRUE)
+osbs1<- merge(osbs_UTM, building_dist, by=0, all=TRUE)
 #Check
-head(osbs_neon_dist)
-head(osbs5)
-#Merge all data frames together for a complete data set
-combined.dist3<-merge(combined.dist2, osbs5, by="plotID", all=T)
+head(building_dist)
+head(osbs1)
 
-write.csv(combined.dist3,file="~/Documents/NEON_LTER_2018/combined_distance_data.csv", row.names=FALSE)
+#roads
+roads_dist<-apply(gDistance(osbs_UTM,roads,byid = TRUE),2,min)
+roads_dist<-data.frame(roads_dist)
+#rename column
+names(roads_dist)[names(roads_dist)=="roads_dist"]<-"roads_dist"
+head(roads_dist)
+#merge data frame to make one complete dataset
+osbs2<-merge(osbs_UTM,roads_dist,by=0,all=TRUE)
+#check
+head(roads_dist)
+head(osbs2)
+#Merge all data frames together for a complete data set
+combined.dist<-merge(osbs1,osbs2,by="plotID",all=T)
+
+write.csv(combined.dist,file="~/Documents/NEON_LTER_2018/osbs_dist.csv", row.names=FALSE)
 ##################################################################################################################################################################
 #Now we need to clean up the data frame and select only the columns we need.
 #Select important columns
-keep=c("plotID", "siteID", "siteNam", "burn_dist",	"boun_dist",	"neonbird_dist",	"FNAI_dist", "neon_dist" )
+keep=c("plotID", "siteID", "elevatn", "nlcdCls", "slpGrdn", "slpAspc","building_dist", "roads_dist")
 
-# Check that all names in keep are in combined.dist3. You want this result to be zero. 
+# Check that all names in keep are in combined.dist5. You want this result to be zero. 
 # If it is anything other than zero, you need to figure out what the appropriate column names are.
-keep[!keep %in% names(combined.dist3)]
+keep[!keep %in% names(combined.dist)]
 
-combined.distances <- combined.dist3
+combined.distances <- combined.dist
 combined.distances@data <- combined.distances@data[,keep] 
-write.csv(combined.distances, file="~/Documents/NEON_LTER_2018/combined_distance_data.csv", row.names=F)
+write.csv(combined.distances, file="~/Documents/NEON_LTER_2018/osbs_dist.csv", row.names=F)
 
 #Make these data a data frame.
 combined.distances<-data.frame(combined.distances@data)
@@ -196,7 +167,7 @@ head(combined.distances)
 #Long Format of combined.distances to characterize dist_type
 library(dplyr)
 library(reshape2)
-combined.distances<-read.csv("~/Documents/NEON_LTER_2018/combined_distance_data.csv")
+combined.distances<-read.csv("~/Documents/NEON_LTER_2018/osbs_dist.csv")
 head(combined.distances)
 
 #We have some unneccessary columns that came with the spatial point data frame. 
@@ -207,7 +178,7 @@ combined.distances$optional<-NULL
 head(combined.distances)
 
 #Create the long format
-combined.distances<-melt(combined.distances, id=c("plotID", "siteID", "siteNam"))
+combined.distances<-melt(combined.distances, id=c("plotID", "siteID", "elevatn", "nlcdCls", "slpGrdn", "slpAspc"))
 head(combined.distances)
 
 #Rename columns to specify disturbance type and distance in meters.
@@ -221,131 +192,63 @@ sort(unique(combined.distances$dist_type))
 #To better inform the users of these data, we should make the disturbance names more informative. 
 # So rename them to fit the exact disturbance type that you are trying to describe.
 combined.distances$dist_type<- as.character(combined.distances$dist_type)
-combined.distances$dist_type[combined.distances$dist_type=="burn_dist"]<-"burn"
-combined.distances$dist_type[combined.distances$dist_type=="boun_dist"]<-"boundary"
-combined.distances$dist_type[combined.distances$dist_type=="neonbird_dist"]<-"neonbird"
-combined.distances$dist_type[combined.distances$dist_type=="FNAI_dist"]<-"FNAI"
-combined.distances$dist_type[combined.distances$dist_type=="neon_dist"]<-"neon"
+combined.distances$dist_type[combined.distances$dist_type=="building_dist"]<-"building"
+combined.distances$dist_type[combined.distances$dist_type=="roads_dist"]<-"roads"
 sort(unique(combined.distances$dist_type))
 
-write.csv(combined.distances,file="~/Documents/NEON_LTER_2018/combined_distance_data.csv", row.names=FALSE)
+write.csv(combined.distances,file="~/Documents/NEON_LTER_2018/neon_plotid_dist2disturbance_osbs.csv", row.names=FALSE)
 
 #To save the workspace with all of our data and final products, use the following code:
-save.image("NEON_OSBS_LTER_combined.RData")
+save.image("NEON_OSBS_LTER.RData")
 ###################################################################################################################################################################Title: Calculating the surface area of a shapefile 
 
-load("NEON_OSBS_LTER_combined.RData")
+load("NEON_OSBS_LTER.RData")
 
-#osbs Burn Area Calculation
-osbs_area<-gArea(osbs_boun)
-osbs_area
-osbs_area<- data.frame(osbs_area)
-osbs_area
-#Rename column
-names(osbs_area)[names(osbs_area)=="osbs_area"] <- "burn_area"
-head(osbs_area)
-#Merge data 
-area_add<- merge(combined.distances, osbs_area, by=0, all=TRUE)
-head(osbs_area)
+# building area calculation
+building_area<-gArea(building)
+building_area
+building_area<-data.frame(building_area)
+building_area
+#rename column
+names(building_area)[names(building_area)=="building_area"]<-"building_area"
+head(building_area)
+#merge data
+area_add<- merge(combined.distances, building_area, by=0, all=TRUE)
+head(building_area)
+head(area_add)
+#change all NA value to 0
+area_add[is.na(area_add)] <- 0
 head(area_add)
 
-#osmu Area Calculation
-osmu_area<-gArea(osmu)
-osmu_area
-osmu_area<- data.frame(osmu_area)
-osmu_area
-#Rename column
-names(osmu_area)[names(osmu_area)=="osmu_area"] <- "osmu_area"
-head(osmu_area)
-#Merge data 
-area_add1<- merge(combined.distances, osmu_area, by=0, all=TRUE)
-head(osmu_area)
+#roads area caclulation
+roads_area<-gArea(roads)
+roads_area
+roads_area<-data.frame(roads_area)
+roads_area
+#rename column
+names(roads_area)[names(roads_area)=="roads_area"]<-"roads_area"
+head(roads_area)
+#merge data
+area_add1<-merge(combined.distances,roads_area,by=0,all=TRUE)
+head(roads_area)
 head(area_add1)
+#change all NA values to 0
+area_add1[is.na(area_add1)]<-0
+head(area_add1)
+#merge data frame
+final<-merge(area_add1,area_add,by=c("Row.names","plotID", "siteID", "elevatn", "nlcdCls", "slpAspc", "slpGrdn", "dist_type", "distance_m"), all=T)
+names(final)
 
-#Merge data frames
-final<-merge(area_add1, area_add, by=0, all=T)
-summary(final)
-
-#FNAI Area Calculation
-FNAI_area<-gArea(FNAI)
-FNAI_area
-FNAI_area<- data.frame(FNAI_area)
-FNAI_area
-#Rename column
-names(FNAI_area)[names(FNAI_area)=="FNAI_area"] <- "FNAI_area"
-head(FNAI_area)
-#Merge data 
-area_add3<- merge(combined.distances, FNAI_area, by=0, all=TRUE)
-head(FNAI_area)
-head(area_add3)
-#Merge data frames
-final2<-merge(final, area_add3, by=0, all=T)
-names(final2)
-
-# neon Source Area Calculation
-neon_area<-gArea(neon)
-neon_area
-neon_area<- data.frame(neon_area)
-neon_area
-#Rename column
-names(neon_area)[names(neon_area)=="neon_area"] <- "neon_area"
-head(neon_area)
-#Merge data 
-area_add4<- merge(combined.distances, neon_area, by=0, all=TRUE)
-head(neon_area)
-head(area_add4)
-#Merge data frames
-final3<-merge(final2, area_add4, by=0, all=T)
-names(final3)
-
-# neonbird Source Area Calculation
-neonbird_area<-gArea(neonbird)
-neonbird_area
-neonbird_area<- data.frame(neonbird_area)
-neonbird_area
-#Rename column
-names(neonbird_area)[names(neonbird_area)=="neonbird_area"] <- "neonbird_area"
-head(neonbird_area)
-#Merge data 
-area_add5<- merge(combined.distances, neonbird_area, by=0, all=TRUE)
-head(neonbird_area)
-head(area_add5)
-#Merge data frames
-final4<-merge(final3, area_add5, by=0, all=T)
-names(final4)
-
-write.csv(final4,file="~/Documents/NEON_LTER_2018/final_plot_level.csv", row.names=FALSE)
+write.csv(final,file="~/Documents/NEON_LTER_2018/osbs_final_plot_level.csv", row.names=FALSE)
 ##################################################################################################################################################################
 #Now we need to clean up the data frame and select only the columns we need.
 #Select important columns
-keep=c("plotID", "siteID", "siteNam", "burn_dist",	"boun_dist",	"neonbird_dist",	"FNAI_dist", "neon_dist" ,
-       "neon_area", "FNAI_area", "osmu_area", "burn_area","neonbird_area" )
+keep=c("plotID", "siteID","elevatn", "nlcdCls", "slpAspc", "slpGrdn", "dist_type", "distance_m", "building_area","roads_area" )
 
 # Check that all names in keep are in combined.dist3. You want this result to be zero. If it is anything other than zero, you need to figure out what the appropriate column names are.
-keep[!keep %in% names(final3)]
+keep[!keep %in% names(final)]
 
-plot_level_dataframe <- final4
+plot_level_dataframe <- final
 plot_level_dataframe@data <- plot_level_dataframe@data[,keep] 
-write.csv(plot_level_dataframe, file="~/Documents/NEON_LTER_2018/final_plot_level.csv", row.names=F)
-
-#Make these data a data frame.
-plot_level_dataframe<-data.frame(plot_level_dataframe@data)
-class(plot_level_dataframe)
-head(plot_level_dataframe)
-
-##################################################################################################################################################################
-#Now we need to put our distance data into long format.
-#Long Format of combined.distances to characterize dist_type
-library(dplyr)
-library(reshape2)
-plot_level_dataframe<-read.csv("~/Documents/NEON_LTER_2018/final_plot_level.csv")
-head(plot_level_dataframe)
-
-#We have some unneccessary columns that came with the spatial point data frame. So, we will exclude those to further clean up our data frame.
-plot_level_dataframe$coords.x1<-NULL
-plot_level_dataframe$coords.x2<-NULL
-plot_level_dataframe$optional<-NULL
-head(plot_level_dataframe)
-
-#Create the long format
+write.csv(plot_level_dataframe, file="~/Documents/NEON_LTER_2018/osbs_final_plot_level.csv", row.names=F)
 

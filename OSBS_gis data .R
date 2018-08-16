@@ -1,8 +1,8 @@
-# Title:			  Writing NEON Data in R
-# Site:			  OSBS
-# Data Sources:	  
-# Authors:		  
-# Date:			 
+# Title: Writing NEON Data in R
+# Site: OSBS
+# Data Sources:	Cameo Arnold 
+# Authors: Huijie Wei  
+# Date:	11 July 2018	 
 
 # Set working directory to where you house "data" directory (with subdirectories raw_data, final_data, scripts, output)
 
